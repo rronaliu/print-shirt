@@ -78,8 +78,14 @@ function readStorage() {
   }
 }
 
-function persistStorage() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(uploads.value));
+function persistUploads(nextUploads: UploadRecord[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUploads));
+    uploads.value = nextUploads;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function fileToDataUrl(file: File) {
@@ -110,13 +116,17 @@ async function saveUpload(file: File) {
     dataUrl
   };
 
-  uploads.value = [...uploads.value, nextRecord];
+  let nextUploads = [...uploads.value, nextRecord];
 
-  if (uploads.value.length > MAX_UPLOADS) {
-    uploads.value = uploads.value.slice(uploads.value.length - MAX_UPLOADS);
+  if (nextUploads.length > MAX_UPLOADS) {
+    nextUploads = nextUploads.slice(nextUploads.length - MAX_UPLOADS);
   }
 
-  persistStorage();
+  // Keep newest uploads: on localStorage quota errors, evict oldest until save succeeds.
+  while (nextUploads.length > 0) {
+    if (persistUploads(nextUploads)) return;
+    nextUploads = nextUploads.slice(1);
+  }
 }
 
 function useUpload(upload: UploadRecord) {
@@ -131,8 +141,8 @@ function useUpload(upload: UploadRecord) {
 }
 
 function removeUpload(uploadId: string) {
-  uploads.value = uploads.value.filter(upload => upload.id !== uploadId);
-  persistStorage();
+  const nextUploads = uploads.value.filter(upload => upload.id !== uploadId);
+  persistUploads(nextUploads);
 }
 
 function recalculateVisibleSlots() {
