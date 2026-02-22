@@ -12,18 +12,70 @@ const emit = defineEmits<{
   "error-change": [value: string];
 }>();
 
-const CANVAS_WIDTH = 150;
-const CANVAS_HEIGHT = 250;
-const MAX_IMAGE_WIDTH = 150;
-const MAX_IMAGE_HEIGHT = 150;
+const MOBILE_BREAKPOINT = "(max-width: 799px)";
+const DESKTOP_CANVAS = {
+  width: 150,
+  height: 250,
+  maxImageWidth: 150,
+  maxImageHeight: 150
+};
+const MOBILE_CANVAS = {
+  width: 120,
+  height: 190,
+  maxImageWidth: 115,
+  maxImageHeight: 135
+};
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const designFile = ref<File | null>(null);
 const isUploading = ref(false);
+const canvasWidth = ref(DESKTOP_CANVAS.width);
+const canvasHeight = ref(DESKTOP_CANVAS.height);
+const maxImageWidth = ref(DESKTOP_CANVAS.maxImageWidth);
+const maxImageHeight = ref(DESKTOP_CANVAS.maxImageHeight);
 
 let fabricCanvas: Canvas | null = null;
 let uploadedImage: FabricImage | null = null;
+
+function updateCanvasSizingByViewport() {
+  const isMobile = window.matchMedia(MOBILE_BREAKPOINT).matches;
+  const preset = isMobile ? MOBILE_CANVAS : DESKTOP_CANVAS;
+
+  canvasWidth.value = preset.width;
+  canvasHeight.value = preset.height;
+  maxImageWidth.value = preset.maxImageWidth;
+  maxImageHeight.value = preset.maxImageHeight;
+}
+
+function repositionUploadedImage() {
+  if (!uploadedImage || !fabricCanvas) return;
+
+  const scale = Math.min(
+    maxImageWidth.value / uploadedImage.width!,
+    maxImageHeight.value / uploadedImage.height!,
+    1
+  );
+
+  uploadedImage.set({
+    left: (canvasWidth.value - uploadedImage.width! * scale) / 2,
+    top: (canvasHeight.value - uploadedImage.height! * scale) / 2,
+    scaleX: scale,
+    scaleY: scale
+  });
+}
+
+function refreshCanvasDimensions() {
+  if (!fabricCanvas) return;
+
+  fabricCanvas.setDimensions({
+    width: canvasWidth.value,
+    height: canvasHeight.value
+  });
+
+  repositionUploadedImage();
+  fabricCanvas.renderAll();
+}
 
 function initCanvas() {
   if (!canvasRef.value) return;
@@ -33,14 +85,19 @@ function initCanvas() {
     backgroundColor: "transparent"
   });
 
-  fabricCanvas.setDimensions({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
+  refreshCanvasDimensions();
 }
 
 onMounted(() => {
+  updateCanvasSizingByViewport();
   initCanvas();
+  window.addEventListener("resize", updateCanvasSizingByViewport);
+  window.addEventListener("resize", refreshCanvasDimensions);
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateCanvasSizingByViewport);
+  window.removeEventListener("resize", refreshCanvasDimensions);
   fabricCanvas?.dispose();
   fabricCanvas = null;
 });
@@ -58,14 +115,14 @@ function applyImage(image: FabricImage) {
   }
 
   const scale = Math.min(
-    MAX_IMAGE_WIDTH / image.width!,
-    MAX_IMAGE_HEIGHT / image.height!,
+    maxImageWidth.value / image.width!,
+    maxImageHeight.value / image.height!,
     1
   );
 
   image.set({
-    left: (CANVAS_WIDTH - image.width! * scale) / 2,
-    top: (CANVAS_HEIGHT - image.height! * scale) / 2,
+    left: (canvasWidth.value - image.width! * scale) / 2,
+    top: (canvasHeight.value - image.height! * scale) / 2,
     scaleX: scale,
     scaleY: scale,
     cornerColor: "#0b8b76",
@@ -163,6 +220,10 @@ watch(
   }
 );
 
+watch([canvasWidth, canvasHeight], () => {
+  refreshCanvasDimensions();
+});
+
 function clearDesign() {
   if (!fabricCanvas || !uploadedImage) return;
 
@@ -180,16 +241,16 @@ function clearDesign() {
     <div
       class="design-drop-zone"
       :style="{
-        '--drop-width': `min(52vw, ${CANVAS_WIDTH}px)`,
-        '--drop-height': `min(64vw, ${CANVAS_HEIGHT}px)`
+        '--drop-width': `min(52vw, ${canvasWidth}px)`,
+        '--drop-height': `min(64vw, ${canvasHeight}px)`
       }"
       @dragover.prevent
       @drop="onDrop"
     >
       <canvas
         ref="canvasRef"
-        :width="CANVAS_WIDTH"
-        :height="CANVAS_HEIGHT"
+        :width="canvasWidth"
+        :height="canvasHeight"
         class="design-canvas"
       />
       <div v-if="isUploading" class="loading-overlay">Uploading image...</div>

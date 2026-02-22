@@ -9,6 +9,7 @@ type ShirtOption = {
 const props = defineProps<{
   activeShirt: ShirtOption
   visible: boolean
+  designImageUrl?: string | null
 }>()
 </script>
 
@@ -16,6 +17,12 @@ const props = defineProps<{
   <aside class="preview-nav" :class="{ 'is-visible': props.visible }" aria-hidden="!props.visible">
     <div class="preview-nav-inner">
       <img class="preview-nav-thumb" :src="props.activeShirt.image" :alt="`${props.activeShirt.name} shirt preview`" />
+      <img
+        v-if="props.designImageUrl"
+        class="preview-nav-design-thumb"
+        :src="props.designImageUrl"
+        alt="Selected design"
+      />
       <div class="preview-nav-copy">
         <p>Design Preview</p>
         <span>{{ props.activeShirt.name }}</span>
@@ -55,6 +62,14 @@ const props = defineProps<{
   }
 
   .preview-nav-thumb {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--line);
+  }
+
+  .preview-nav-design-thumb {
     width: 38px;
     height: 38px;
     border-radius: 8px;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 
 import DesignPreviewPanel from "@/components/DesignPreviewPanel.vue";
@@ -53,6 +53,7 @@ const activeShirt = computed(
 const quantitySafe = computed(() => Math.max(1, Number(quantity.value) || 1));
 
 const designFile = ref<File | null>(null);
+const selectedDesignImageUrl = ref<string | null>(null);
 const orderSetupAnchorRef = ref<HTMLElement | null>(null);
 const isMobileViewport = ref(false);
 const isPreviewMobileSticky = ref(false);
@@ -74,6 +75,16 @@ function updateStickyState() {
 function onDesignFileChange(file: File | null) {
   designFile.value = file;
 }
+
+watch(designFile, nextFile => {
+  if (selectedDesignImageUrl.value) {
+    URL.revokeObjectURL(selectedDesignImageUrl.value);
+    selectedDesignImageUrl.value = null;
+  }
+
+  if (!nextFile) return;
+  selectedDesignImageUrl.value = URL.createObjectURL(nextFile);
+});
 
 const orderSummary = computed(() => {
   return [
@@ -120,6 +131,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (selectedDesignImageUrl.value) {
+    URL.revokeObjectURL(selectedDesignImageUrl.value);
+    selectedDesignImageUrl.value = null;
+  }
   window.removeEventListener("resize", updateViewportFlags);
   window.removeEventListener("resize", updateStickyState);
   window.removeEventListener("scroll", updateStickyState);
@@ -131,6 +146,7 @@ onBeforeUnmount(() => {
     <DesignPreviewPanelNav
       :active-shirt="activeShirt"
       :visible="isPreviewMobileSticky"
+      :design-image-url="selectedDesignImageUrl"
     />
 
     <section class="content-grid">
