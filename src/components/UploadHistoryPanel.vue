@@ -12,9 +12,11 @@ type UploadRecord = {
 };
 
 const STORAGE_KEY = "print-shirt.upload-history.v1";
-const MAX_UPLOADS = 10;
+const MAX_UPLOADS = 5;
 const AVATAR_SIZE = 56;
 const AVATAR_GAP = 8;
+const HISTORY_MAX_DIMENSION = 360;
+const HISTORY_EXPORT_QUALITY = 0.78;
 
 const props = defineProps<{
   latestFile: File | null;
@@ -97,8 +99,69 @@ function fileToDataUrl(file: File) {
   });
 }
 
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = src;
+  });
+}
+
+async function fileToHistoryData(file: File) {
+  const originalDataUrl = await fileToDataUrl(file);
+
+  if (!file.type.startsWith("image/")) {
+    return {
+      dataUrl: originalDataUrl,
+      type: file.type || "application/octet-stream"
+    };
+  }
+
+  // History items are already stored as optimized WebP.
+  // Keep exact bytes to avoid generating new data URLs and duplicating entries.
+  if (file.type === "image/webp") {
+    return {
+      dataUrl: originalDataUrl,
+      type: "image/webp"
+    };
+  }
+
+  try {
+    const image = await loadImage(originalDataUrl);
+    const scale = Math.min(
+      1,
+      HISTORY_MAX_DIMENSION / image.width,
+      HISTORY_MAX_DIMENSION / image.height
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Missing canvas context");
+
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    // WebP significantly reduces storage usage and keeps localStorage stable.
+    const optimizedDataUrl = canvas.toDataURL("image/webp", HISTORY_EXPORT_QUALITY);
+
+    return {
+      dataUrl: optimizedDataUrl,
+      type: "image/webp"
+    };
+  } catch {
+    return {
+      dataUrl: originalDataUrl,
+      type: file.type || "image/png"
+    };
+  }
+}
+
 async function saveUpload(file: File) {
-  const dataUrl = await fileToDataUrl(file);
+  const historyData = await fileToHistoryData(file);
+  const dataUrl = historyData.dataUrl;
   const existingIndex = uploads.value.findIndex(
     upload => upload.dataUrl === dataUrl
   );
@@ -110,7 +173,7 @@ async function saveUpload(file: File) {
   const nextRecord: UploadRecord = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: file.name,
-    type: file.type || "image/png",
+    type: historyData.type,
     size: file.size,
     savedAt: new Date().toISOString(),
     dataUrl
