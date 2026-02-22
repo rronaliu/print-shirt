@@ -20,10 +20,10 @@ const DESKTOP_CANVAS = {
   maxImageHeight: 150
 };
 const MOBILE_CANVAS = {
-  width: 120,
-  height: 190,
-  maxImageWidth: 115,
-  maxImageHeight: 135
+  width: 104,
+  height: 164,
+  maxImageWidth: 100,
+  maxImageHeight: 118
 };
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -240,6 +240,7 @@ function clearDesign() {
   <div class="fabric-controls">
     <div
       class="design-drop-zone"
+      :class="{ 'has-design': !!designFile }"
       :style="{
         '--drop-width': `min(52vw, ${canvasWidth}px)`,
         '--drop-height': `min(64vw, ${canvasHeight}px)`
@@ -302,6 +303,16 @@ function clearDesign() {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(1px);
+}
+
+.design-drop-zone.has-design {
+  backdrop-filter: none;
+}
+
+@media (max-width: 799px) {
+  .design-drop-zone {
+    top: 50%;
+  }
 }
 
 .design-canvas {
