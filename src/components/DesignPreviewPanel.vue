@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from "vue";
 
-import FabricDropArea from '@/components/FabricDropArea.vue'
-import UploadHistoryPanel from '@/components/UploadHistoryPanel.vue'
-import type { HistoryUploadSelection } from '@/types/uploads'
+import FabricDropArea from "@/components/FabricDropArea.vue";
+import UploadHistoryPanel from "@/components/UploadHistoryPanel.vue";
+import type { HistoryUploadSelection } from "@/types/uploads";
 
 type ShirtOption = {
-  id: string
-  name: string
-  swatch: string
-  image: string
-}
+  id: string;
+  name: string;
+  swatch: string;
+  image: string;
+};
 
 const props = defineProps<{
-  activeShirt: ShirtOption
-}>()
+  activeShirt: ShirtOption;
+}>();
 
 const emit = defineEmits<{
-  'design-file-change': [value: File | null]
-}>()
+  "design-file-change": [value: File | null];
+}>();
 
-const designFile = ref<File | null>(null)
-const designError = ref('')
-const selectedHistoryUpload = ref<HistoryUploadSelection | null>(null)
+const designFile = ref<File | null>(null);
+const designError = ref("");
+const selectedHistoryUpload = ref<HistoryUploadSelection | null>(null);
 
 function onFileChange(file: File | null) {
-  designFile.value = file
-  emit('design-file-change', file)
+  designFile.value = file;
+  emit("design-file-change", file);
 }
 
 function onErrorChange(error: string) {
-  designError.value = error
+  designError.value = error;
 }
 
 function onSelectUpload(upload: HistoryUploadSelection) {
-  selectedHistoryUpload.value = upload
+  selectedHistoryUpload.value = upload;
 }
 </script>
 
@@ -46,15 +46,26 @@ function onSelectUpload(upload: HistoryUploadSelection) {
     </div>
 
     <div class="shirt-stage">
-      <img class="shirt-photo" :src="props.activeShirt.image" :alt="`${props.activeShirt.name} men's shirt`" />
-      <FabricDropArea :history-upload="selectedHistoryUpload" @file-change="onFileChange" @error-change="onErrorChange" />
+      <img
+        class="shirt-photo"
+        :src="props.activeShirt.image"
+        :alt="`${props.activeShirt.name} men's shirt`"
+      />
+      <FabricDropArea
+        :history-upload="selectedHistoryUpload"
+        @file-change="onFileChange"
+        @error-change="onErrorChange"
+      />
     </div>
 
     <p class="hint">Move and resize the artwork directly on the shirt area.</p>
     <p v-if="designFile" class="file-name">Loaded: {{ designFile.name }}</p>
     <p v-if="designError" class="error">{{ designError }}</p>
 
-    <UploadHistoryPanel :latest-file="designFile" @select-upload="onSelectUpload" />
+    <UploadHistoryPanel
+      :latest-file="designFile"
+      @select-upload="onSelectUpload"
+    />
   </article>
 </template>
 
@@ -94,7 +105,7 @@ function onSelectUpload(upload: HistoryUploadSelection) {
   position: relative;
   border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(160deg, #e6efe8, #e9e5d8);
+  background: transparent;
   min-height: 420px;
 }
 
