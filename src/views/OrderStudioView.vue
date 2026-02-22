@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 
-import HeroSection from "@/components/HeroSection.vue";
 import DesignPreviewPanel from "@/components/DesignPreviewPanel.vue";
+import DesignPreviewPanelNav from "@/components/DesignPreviewPanelNav.vue";
 import OrderSetupPanel from "@/components/OrderSetupPanel.vue";
 
 import type { ShirtColorId, ShirtSize } from "@/stores/order";
@@ -53,6 +53,23 @@ const activeShirt = computed(
 const quantitySafe = computed(() => Math.max(1, Number(quantity.value) || 1));
 
 const designFile = ref<File | null>(null);
+const orderSetupAnchorRef = ref<HTMLElement | null>(null);
+const isMobileViewport = ref(false);
+const isPreviewMobileSticky = ref(false);
+
+function updateViewportFlags() {
+  isMobileViewport.value = window.matchMedia("(max-width: 799px)").matches;
+}
+
+function updateStickyState() {
+  if (!isMobileViewport.value || !orderSetupAnchorRef.value) {
+    isPreviewMobileSticky.value = false;
+    return;
+  }
+
+  const anchorTop = orderSetupAnchorRef.value.getBoundingClientRect().top;
+  isPreviewMobileSticky.value = anchorTop <= 0;
+}
 
 function onDesignFileChange(file: File | null) {
   designFile.value = file;
@@ -93,22 +110,38 @@ function submitOrder() {
     MAIL_TO
   )}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
+
+onMounted(() => {
+  updateViewportFlags();
+  updateStickyState();
+  window.addEventListener("resize", updateViewportFlags);
+  window.addEventListener("resize", updateStickyState);
+  window.addEventListener("scroll", updateStickyState, { passive: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateViewportFlags);
+  window.removeEventListener("resize", updateStickyState);
+  window.removeEventListener("scroll", updateStickyState);
+});
 </script>
 
 <template>
   <main class="order-studio">
-    <!-- <HeroSection /> -->
+    <DesignPreviewPanelNav
+      :active-shirt="activeShirt"
+      :visible="isPreviewMobileSticky"
+    />
 
     <section class="content-grid">
-      <DesignPreviewPanel
-        :active-shirt="activeShirt"
-        @design-file-change="onDesignFileChange"
-      />
-      <OrderSetupPanel
-        :shirt-colors="shirtColors"
-        :sizes="sizes"
-        @submit="submitOrder"
-      />
+      <DesignPreviewPanel :active-shirt="activeShirt" @design-file-change="onDesignFileChange" />
+      <div ref="orderSetupAnchorRef">
+        <OrderSetupPanel
+          :shirt-colors="shirtColors"
+          :sizes="sizes"
+          @submit="submitOrder"
+        />
+      </div>
     </section>
   </main>
 </template>
