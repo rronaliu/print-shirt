@@ -54,7 +54,7 @@ const quantitySafe = computed(() => Math.max(1, Number(quantity.value) || 1));
 
 const designFile = ref<File | null>(null);
 const selectedDesignImageUrl = ref<string | null>(null);
-const orderSetupAnchorRef = ref<HTMLElement | null>(null);
+const designPanelRef = ref<HTMLElement | null>(null);
 const isMobileViewport = ref(false);
 const isPreviewMobileSticky = ref(false);
 
@@ -63,13 +63,19 @@ function updateViewportFlags() {
 }
 
 function updateStickyState() {
-  if (!isMobileViewport.value || !orderSetupAnchorRef.value) {
+  if (!isMobileViewport.value || !designPanelRef.value) {
     isPreviewMobileSticky.value = false;
     return;
   }
 
-  const anchorTop = orderSetupAnchorRef.value.getBoundingClientRect().top;
-  isPreviewMobileSticky.value = anchorTop <= 0;
+  const shirtPhoto = designPanelRef.value.querySelector(".shirt-photo");
+  if (!shirtPhoto) {
+    isPreviewMobileSticky.value = false;
+    return;
+  }
+
+  const photoBottom = shirtPhoto.getBoundingClientRect().bottom;
+  isPreviewMobileSticky.value = photoBottom <= 0;
 }
 
 function onDesignFileChange(file: File | null) {
@@ -150,14 +156,14 @@ onBeforeUnmount(() => {
     />
 
     <section class="content-grid">
-      <DesignPreviewPanel :active-shirt="activeShirt" @design-file-change="onDesignFileChange" />
-      <div ref="orderSetupAnchorRef">
-        <OrderSetupPanel
-          :shirt-colors="shirtColors"
-          :sizes="sizes"
-          @submit="submitOrder"
-        />
+      <div ref="designPanelRef">
+        <DesignPreviewPanel :active-shirt="activeShirt" @design-file-change="onDesignFileChange" />
       </div>
+      <OrderSetupPanel
+        :shirt-colors="shirtColors"
+        :sizes="sizes"
+        @submit="submitOrder"
+      />
     </section>
   </main>
 </template>
